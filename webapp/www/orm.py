@@ -2,15 +2,17 @@ import logging,asyncio,aiomysql
 
 logging.basicConfig(level=logging.INFO)
 
+__pool = None
+
 def log(sql, args=()):
-    logging.info('SQL: %s' % sql)
+    logging.info('SQL: %s, args: %s' % (sql,args))
 
 async def create_pool(loop, **kwargs):
     logging.info('create database connection pool...')
     global __pool
     __pool = await aiomysql.create_pool(
         host=kwargs.get('host', 'localhost'),
-        port=kwargs.get('port', '3306'),
+        port=kwargs.get('port', 3306),
         user=kwargs['user'],
         password=kwargs['password'],
         db=kwargs['db'],
@@ -20,6 +22,13 @@ async def create_pool(loop, **kwargs):
         minsize=kwargs.get('minsize', 1),
         loop=loop,
     )
+
+async def close_pool():
+    logging.info('close database connection pool...')
+    global __pool
+    if __pool is not None:
+        __pool.close()
+        await __pool.wait_closed()
 
 async def select(sql, args, size=None):
     log(sql, args)
@@ -36,7 +45,7 @@ async def select(sql, args, size=None):
         return rs
 
 async def execute(sql, args, autocommit=True):
-    log(sql)
+    log(sql,args)
     async with __pool.get() as conn:
         if not autocommit:
             await conn.begin()
