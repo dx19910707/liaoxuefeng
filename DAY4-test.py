@@ -6,7 +6,7 @@ DAY4 数据测试代码
 """
 async def test(loop):
     # 创建连接池
-    db_dict = {'user': 'root', 'password': 'hkj19651216', 'db': 'awesome'} # user
+    db_dict = {'user': 'root', 'password': '123456', 'db': 'awesome'}
     await orm.create_pool(loop=loop, **db_dict)
     u = User(name='Test', email='test14@example.com', passwd='12345', image='about:blank', id='14')
     await u.save()

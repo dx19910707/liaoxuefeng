@@ -1,7 +1,11 @@
 import logging,asyncio,aiomysql
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
 
+DEFAULT_SERVER_DATE_FORMAT = "%Y-%m-%d"
+DEFAULT_SERVER_TIME_FORMAT = "%H:%M:%S"
+DEFAULT_SERVER_DATETIME_FORMAT = "%s %s" % (DEFAULT_SERVER_DATE_FORMAT,DEFAULT_SERVER_TIME_FORMAT)
 __pool = None
 
 def log(sql, args=()):
@@ -102,6 +106,11 @@ class TextField(Field):
 
     def __init__(self, name=None, default=None):
         super().__init__(name, 'text', False, default)
+
+class DatetimeField(Field):
+
+    def __init__(self, name=None, primary_key=False):
+        super(DatetimeField, self).__init__(name,'datetime',primary_key,default=lambda :datetime.now().strftime(DEFAULT_SERVER_DATETIME_FORMAT))
 
 class ModelMetaclass(type):
 
