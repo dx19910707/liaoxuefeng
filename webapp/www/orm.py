@@ -19,7 +19,7 @@ async def create_pool(loop, **kwargs):
         port=kwargs.get('port', 3306),
         user=kwargs['user'],
         password=kwargs['password'],
-        db=kwargs['database'],
+        db=kwargs['db'],
         charset=kwargs.get('charset', 'utf8'),
         autocommit=kwargs.get('autocommit', True),
         maxsize=kwargs.get('maxsize', 10),
@@ -37,9 +37,9 @@ async def close_pool():
 async def select(sql, args, size=None):
     log(sql, args)
     global __pool
-    with (await __pool) as conn:
-        cur = await conn.cursor(aiomysql.DictCursor)
-        await cur.execute(sql.replace('?', '%s'), args or ())
+    async with  __pool.get() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(sql.replace('?', '%s'), args or ())
         if size:
             rs = await cur.fetchmany(size)
         else:
@@ -145,7 +145,7 @@ class ModelMetaclass(type):
         attrs['__primary_key__'] = primaryKey # 主键属性名
         attrs['__fields__'] = fields # 除主键外的属性名
         # 构造默认的SELECT,INSERT,UPDATE和DELETE语句
-        attrs['__select__'] = 'select `%s`,%s form `%s`'% (primaryKey, ','.join(fields), tableName)
+        attrs['__select__'] = 'select `%s`,%s from `%s`'% (primaryKey, ','.join(fields), tableName)
         attrs['__insert__'] = 'insert into `%s` (%s, `%s`) VALUES (%s)' % (tableName,','.join(escaped_fields), primaryKey, create_args_string(len(escaped_fields) +1))
         attrs['__update__'] = 'update `%s` set %s where `%s`=?' % (tableName, ', '.join(map(lambda f: '`%s`=?' % (mappings.get(f).name or f), fields)), primaryKey)
         attrs['__delete__'] = 'delete from `%s` where `%s`=?' % (tableName, primaryKey)
