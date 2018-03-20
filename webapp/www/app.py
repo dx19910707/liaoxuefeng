@@ -31,11 +31,11 @@ def init_jinja2(app, **kw):
     app['__templating__'] = env
 
 async def logger_factory(app, handler):
-    async def logger(request):
+    async def logger1(request):
         logger.info('Request: %s %s' % (request.method, request.path))
         # await asyncio.sleep(0.3)
         return (await handler(request))
-    return logger
+    return logger1
 
 async def data_factory(app, handler):
     async def parse_data(request):
