@@ -1,7 +1,6 @@
-import logging,asyncio,aiomysql
+import aiomysql
 from datetime import datetime
-
-logging.basicConfig(level=logging.INFO)
+from base.log import logger
 
 DEFAULT_SERVER_DATE_FORMAT = "%Y-%m-%d"
 DEFAULT_SERVER_TIME_FORMAT = "%H:%M:%S"
@@ -9,10 +8,10 @@ DEFAULT_SERVER_DATETIME_FORMAT = "%s %s" % (DEFAULT_SERVER_DATE_FORMAT,DEFAULT_S
 __pool = None
 
 def log(sql, args=()):
-    logging.info('SQL: %s, args: %s' % (sql,args))
+    logger.info('SQL: %s, args: %s' % (sql,args))
 
 async def create_pool(loop, **kwargs):
-    logging.info('create database connection pool...')
+    logger.info('start create database connection pool...')
     global __pool
     __pool = await aiomysql.create_pool(
         host=kwargs.get('host', 'localhost'),
@@ -28,7 +27,7 @@ async def create_pool(loop, **kwargs):
     )
 
 async def close_pool():
-    logging.info('close database connection pool...')
+    logger.info('close database connection pool...')
     global __pool
     if __pool is not None:
         __pool.close()
@@ -45,7 +44,7 @@ async def select(sql, args, size=None):
         else:
             rs = await cur.fetchall()
         await cur.close()
-        logging.info('rows returned: %s' % len(rs))
+        logger.info('rows returned: %s' % len(rs))
         return rs
 
 async def execute(sql, args, autocommit=True):
@@ -119,14 +118,14 @@ class ModelMetaclass(type):
         if name == 'Model':
             return type.__new__(cls, name, bases, attrs)
         tableName = attrs.get('__table__', None) or name
-        logging.info('found model: %s (table: %s)'% (name, tableName))
+        logger.info('found model: %s (table: %s)'% (name, tableName))
         # 获取所有的Field和主键名：
         mappings = dict()
         fields = []
         primaryKey = None
         for k, v in attrs.items():
             if isinstance(v,Field):
-                logging.info(' Found mapping: %s ==> %s'% (k,v))
+                logger.info('Found mapping: %s ==> %s'% (k,v))
                 mappings[k] = v
                 if v.primary_key:
                     # 找到主键
@@ -175,7 +174,7 @@ class Model(dict, metaclass=ModelMetaclass):
             field = self.__mappings__[key]
             if field.default is not None:
                 value = field.default() if callable(field.default) else field.default
-                logging.debug('using default value for %s: %s' % (key, str(value)))
+                logger.debug('using default value for %s: %s' % (key, str(value)))
                 setattr(self, key, value)
         return value
 
@@ -231,18 +230,18 @@ class Model(dict, metaclass=ModelMetaclass):
         args.append(self.getValueOrDefault(self.__primary_key__))
         rows = await execute(self.__insert__, args)
         if rows != 1:
-            logging.warn('failed to insert record: affected rows: %s' % rows)
+            logger.warn('failed to insert record: affected rows: %s' % rows)
 
     async def update(self):
         args = list(map(self.getValue, self.__fields__))
         args.append(self.getValue(self.__primary_key__))
         rows = await execute(self.__update__, args)
         if rows != 1:
-            logging.warn('failed to update by primary key: affected rows: %s' % rows)
+            logger.warn('failed to update by primary key: affected rows: %s' % rows)
 
     async def remove(self):
         args = [self.getValue(self.__primary_key__)]
         rows = await execute(self.__delete__, args)
         if rows != 1:
-            logging.warn('failed to remove by primary key: affected rows: %s' % rows)
+            logger.warn('failed to remove by primary key: affected rows: %s' % rows)
 

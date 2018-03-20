@@ -1,11 +1,4 @@
-import logging
-import asyncio,os,json,time,orm
-from web import add_routes, add_static
-from datetime import datetime
-from aiohttp import web
-from jinja2 import Environment, FileSystemLoader
-
-import logging; logging.basicConfig(level=logging.INFO)
+from base.log import logger
 
 import asyncio, os, json, time
 from datetime import datetime
@@ -17,7 +10,7 @@ import orm
 from web import add_routes, add_static
 
 def init_jinja2(app, **kw):
-    logging.info('init jinja2...')
+    logger.info('init jinja2...')
     options = dict(
         autoescape = kw.get('autoescape', True),
         block_start_string = kw.get('block_start_string', '{%'),
@@ -29,7 +22,7 @@ def init_jinja2(app, **kw):
     path = kw.get('path', None)
     if path is None:
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
-    logging.info('set jinja2 template path: %s' % path)
+        logger.info('set jinja2 template path: %s' % path)
     env = Environment(loader=FileSystemLoader(path), **options)
     filters = kw.get('filters', None)
     if filters is not None:
@@ -39,7 +32,7 @@ def init_jinja2(app, **kw):
 
 async def logger_factory(app, handler):
     async def logger(request):
-        logging.info('Request: %s %s' % (request.method, request.path))
+        logger.info('Request: %s %s' % (request.method, request.path))
         # await asyncio.sleep(0.3)
         return (await handler(request))
     return logger
@@ -49,16 +42,16 @@ async def data_factory(app, handler):
         if request.method == 'POST':
             if request.content_type.startswith('application/json'):
                 request.__data__ = await request.json()
-                logging.info('request json: %s' % str(request.__data__))
+                logger.info('request json: %s' % str(request.__data__))
             elif request.content_type.startswith('application/x-www-form-urlencoded'):
                 request.__data__ = await request.post()
-                logging.info('request form: %s' % str(request.__data__))
+                logger.info('request form: %s' % str(request.__data__))
         return (await handler(request))
     return parse_data
 
 async def response_factory(app, handler):
     async def response(request):
-        logging.info('Response handler...')
+        logger.info('Response handler...')
         r = await handler(request)
         if isinstance(r, web.StreamResponse):
             return r
@@ -116,7 +109,7 @@ async  def init(loop):
     add_routes(app, 'handlers')
     add_static(app)
     srv = await loop.create_server(app.make_handler(), '127.0.0.1', 9000)
-    logging.info('server started at http://127.0.0.1:9000...')
+    logger.info('server started at http://127.0.0.1:9000...')
     return srv
 
 loop = asyncio.get_event_loop()
