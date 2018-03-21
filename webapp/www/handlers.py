@@ -3,7 +3,7 @@ import re, time, json, logging, hashlib, base64, asyncio, markdown2
 from aiohttp import web
 
 from web import get, post
-from apis import APIValueError, APIResourceNotFoundError, APIError, APIPermissionError
+from apis import APIValueError, APIResourceNotFoundError, APIError, APIPermissionError, Page
 
 from models import User, Comment, Blog, next_id
 from config import configs
@@ -181,3 +181,20 @@ def api_create_blog(request, *, name, summary, content):
     blog = Blog(user_id=request.__user__.id, user_name=request.__user__.name, user_image=request.__user__.image, name=name.strip(), summary=summary.strip(), content=content.strip())
     yield from blog.save()
     return blog
+
+@get('/api/blogs')
+async def api_blogs(*, page='1'):
+    page_index = get_page_index(page)
+    num = await Blog.findNumber('count(id)')
+    p = Page(num, page_index)
+    if num == 0:
+        return dict(page=p, blogs=())
+    blogs = await Blog.findAll(orderBy='created_at desc', limit=(p.offset, p.limit))
+    return dict(page=p, blogs=blogs)
+
+@get('/manage/blogs')
+def manage_blogs(*, page='1'):
+    return {
+        '__template__': 'manage_blogs.html',
+        'page_index': get_page_index(page)
+    }
